@@ -12,18 +12,20 @@ import en_core_web_trf
 NER = en_core_web_trf.load()
 
 openai.api_key = "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"
-modelName = "gpt-3.5-turbo"
+
+modelName = None
+tweetCharacterLimit = None
+chatGPTTokenLimit = None
+safeContextLimit = None 
+enc = None
+
+tweetCharacterLimit = 280
 
 searchAPI = "AIzaSyDuqVqBQ6c3tFXjHvvgtazm_PhvbN-awUA"
 cx = "46f8dd26da81f44df"
 
 relevantEntityCategories = ["PERSON","NORP","ORG","WORK_OF_ART","LAW","EVENT","PRODUCT","NORP"] #https://www.kaggle.com/code/curiousprogrammer/entity-extraction-and-classification-using-spacy
 
-tweetCharacterLimit = 280
-chatGPTTokenLimit = 4097
-safeContextLimit = chatGPTTokenLimit-tweetCharacterLimit
-
-enc = tiktoken.encoding_for_model(modelName)
 
 def countTokens(text):
     tokenLst = enc.encode(text)
@@ -34,8 +36,8 @@ def search(query):
     responce = requests.get(f"https://www.googleapis.com/customsearch/v1?key={searchAPI}&cx={cx}&q={query}")
     return(responce)
 
-def askGPT(msg, context):
-    completion = openai.ChatCompletion.create(model=modelName,temperature = 0.6,messages = [
+def askGPT(msg, context, temperatureIn):
+    completion = openai.ChatCompletion.create(model=modelName,temperature = temperatureIn,messages = [
                                 {
                                     "role":"system","content":context,
                                     "role":"user","content":msg
@@ -71,12 +73,12 @@ def extractTextFromResource(linkLst):
     
     return out
 
-def summariseOutput_GPT(initialText,gptRole,prompt):
+def summariseOutput_GPT(initialText,gptRole,prompt,temperature):
     latestTweet = initialText
     while len(latestTweet)>tweetCharacterLimit:
-        context = f"Imagine you are a {gptRole}. You have a Tweet that you want to post but it is too long so you want to make it shorter"
-        msg = f"Shorten the existing tweet a little bit while ensuring that it answers the query. The query is : '{prompt}'. The existing tweet is : {initialText}"
-        latestTweet = askGPT(msg, context)
+        context = f"Imagine you are a {gptRole}. You have a Tweet that you want to post but it is a little long so you want to make it shorter"
+        msg = f"Shorten the existing tweet a little bit while ensuring that it answers the query. The query is : '{prompt}'. The existing tweet is : '{initialText}'. The shortened tweet should preserve the vibe of the original tweet and be as engaging and clear."
+        latestTweet = askGPT(msg, context,temperatureIn= temperature )
     
     return latestTweet
 
@@ -101,47 +103,75 @@ def extractRelevantNamedEntities(text, spacyLabelList):
     
     return(relevantEntities)
 
-def improvementLoop(gptRole,currTweet,text):
-    while True:
-        improvementRequest = input("Would you like any improvements done to the tweet? If not, press return : \n") or False
+def selfImprovement(tweet,gptRole,prompt, context,temp,selfImprovementLimitCount):
+    currTweet = tweet
+    context = f"Imagine you are a {gptRole}. You have written a tweet '{currTweet}' that aims to answer the following query '{prompt}'. Now you want to improve that tweet. The original tweet was written based on the followin research : {context}"
 
-        if(improvementRequest == False):
-            return(currTweet)
+    trace = [{"initial": currTweet}]
+    for _ in range(1,selfImprovementLimitCount):
+        msg = f"Please objectively evaluate the following tweet '{tweet}' with respect to it's clarity, engagement of the target audience, and it's ability to answer the following query/achieve following purpose '{prompt}'. Also suggest improvements without implementing them."
+        feedback = askGPT(msg,context,temperatureIn = temp)
+
+        msg = f"rewrite the tweet '{tweet}' based on the feedback '{feedback}' while only relying on the following research for factual statements : {context}"
+        currTweet = askGPT(msg,context,temperatureIn = temp)
+
+        trace.append({"feedback":feedback,"improved Tweet": currTweet})
         
-        context = f"Imagine you are a {gptRole}. Imagine you wrote a tweet and you are not happy with it."
-        msg = f"Improve the current tweet '{currTweet}' by doing the following: {improvementRequest}"
+    return currTweet,trace
 
-        currTweet = askGPT(msg, context)
-
-        print("Here is your improved Tweet : " + currTweet + "\n")
-
-
-def simplePromptTweetGeneration(prompt,numSources, gptRole):
-    # deals with prompts that are questions or "tell me about ..." type prompts
-    res = search(prompt)
-    linkLst = getListOfLinks(res, numSources)
-    print("sources: " + str(linkLst) + "\n")
-    text = extractTextFromResource(linkLst)
-
-    context = f"Imagine you are a {gptRole}"
-    msg = f"Create a tweet that answers the following query '{prompt}' while making use of emoji if relevant. The response should be based on the following extracted text from a few different web pages: {text}"
+def simplePromptTweetGeneration(prompt,numSources, gptRole, self_improvement,modelTemperature, namedEntitiesDisplayValue = False, preExtractedText = "",modelNameIn="gpt-3.5-turbo",currTweet="", requestType="gen",selfImprovementLimitCount = 1):
     
-    output = askGPT(msg, context)
-    print("initial tweet : " + output + "\n")
+    global modelName
+    global chatGPTTokenLimit
+    global safeContextLimit
+    global enc
 
-    output_better = summariseOutput_GPT(output,gptRole,prompt)
-    output_better = removeHashtags(output_better)
-    print("summarised tweet without hashtags : " + output_better + "\n")
+    modelName = modelNameIn
 
-    improvementLoop(gptRole,text)
-    namedEntities = extractRelevantNamedEntities(output_better, relevantEntityCategories)
+    if modelName == "gpt-4":
+        chatGPTTokenLimit = 8192
+    elif modelName == "gpt-3.5-turbo":
+        chatGPTTokenLimit = 4097
+    
+    safeContextLimit = (chatGPTTokenLimit-tweetCharacterLimit)- 1000 # removed another 1000 to ensure that we have enough space for system message and query
+    enc = tiktoken.encoding_for_model(modelName)
 
-    print(namedEntities)
+    # getting and processing context sources
+    if preExtractedText == "":
+        res = search(prompt)
+        linkLst = getListOfLinks(res, numSources)
+        text = extractTextFromResource(linkLst)
+    else:
+        linkLst = []
+        text = preExtractedText
 
-    return(output_better)
+    if requestType == "gen":
+        context = f"Imagine you are a {gptRole}"
+        msg = f"Create a tweet that answers the following query '{prompt}' while making use of emoji if relevant. The response should be based on the following extracted text from a few different web pages: {text}"
+    elif requestType == "imp":
+        context = f"Imagine you are a {gptRole}. Imagine you wrote a tweet and you are not happy with it."
+        msg = f"Improve the current tweet '{currTweet}' by doing the following: {prompt}. Here is some research that was used to generate the initial tweet: "+text
 
-# prompt = input("Please provide prompt. Example: 'Are NFTs expensive?' : \n")
-# defaultRole = 'A person building reputation as NFT expert by posting Tweets on Tweeter'
-# role = input("What kind of person would you like to have written the tweet? The default is : '" + defaultRole + "'.Press return for default, else please enter below: \n") or defaultRole
-# out = simplePromptTweetGeneration(prompt,5,role)
+    
+    output = askGPT(msg, context, temperatureIn=modelTemperature)
+
+    # self improving tweet
+    if self_improvement:
+      output,trace = selfImprovement(output,gptRole,prompt,text, modelTemperature,selfImprovementLimitCount)
+    else:
+        trace = []
+
+    # fixing up a tweet
+    output = summariseOutput_GPT(output,gptRole,prompt,modelTemperature)
+    output = removeHashtags(output)
+
+
+    
+    # named entities handling
+    if namedEntitiesDisplayValue:
+        namedEntities = extractRelevantNamedEntities(output, relevantEntityCategories)
+    else:
+        namedEntities = []
+
+    return(output,namedEntities,linkLst,text,trace)
 
