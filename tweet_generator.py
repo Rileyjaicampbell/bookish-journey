@@ -11,7 +11,7 @@ import en_core_web_trf
 
 NER = en_core_web_trf.load()
 
-openai.api_key = "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"
+openai.api_key = None
 
 modelName = None
 tweetCharacterLimit = None
@@ -21,7 +21,7 @@ enc = None
 
 tweetCharacterLimit = 280
 
-searchAPI = "AIzaSyDuqVqBQ6c3tFXjHvvgtazm_PhvbN-awUA"
+searchAPI = None
 cx = "46f8dd26da81f44df"
 
 relevantEntityCategories = ["PERSON","NORP","ORG","WORK_OF_ART","LAW","EVENT","PRODUCT","NORP"] #https://www.kaggle.com/code/curiousprogrammer/entity-extraction-and-classification-using-spacy
@@ -119,12 +119,16 @@ def selfImprovement(tweet,gptRole,prompt, context,temp,selfImprovementLimitCount
         
     return currTweet,trace
 
-def simplePromptTweetGeneration(prompt,numSources, gptRole, self_improvement,modelTemperature, namedEntitiesDisplayValue = False, preExtractedText = "",modelNameIn="gpt-3.5-turbo",currTweet="", requestType="gen",selfImprovementLimitCount = 1):
+def simplePromptTweetGeneration(prompt,numSources, gptRole, self_improvement,modelTemperature, namedEntitiesDisplayValue = False, preExtractedText = "",modelNameIn="gpt-3.5-turbo",currTweet="", requestType="gen",selfImprovementLimitCount = 1,apiKeyOpenAI = None,searchAPIKey = None  ):
     
     global modelName
     global chatGPTTokenLimit
     global safeContextLimit
     global enc
+    global searchAPI
+    
+    openai.api_key = apiKeyOpenAI
+    searchAPI = searchAPIKey
 
     modelName = modelNameIn
 

@@ -8,6 +8,7 @@ meeting notes:
 
 
 Instruction for setting everything up:
+- for ross: source TweetProj/bin/activate
 - for Ross : pip freeze > requirements.txt to isolate python dependancies
 - for Ross : add, commit and push to github
 - for Matt and Riley: pull everything and then in the Tweet_generator folder type: pip install -r requirements.txt
