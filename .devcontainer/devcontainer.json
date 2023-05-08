@@ -4,11 +4,7 @@
 	"customizations": {
 		// Configure properties specific to VS Code.
 		"vscode": {
-			// Set *default* container specific settings.json values on container create.
-			"settings": { 
-				"python.defaultInterpreterPath": "TweetProj/bin/python"
-			},
-			
+
 			// Add the IDs of extensions you want installed when the container is created.
 			"extensions": [
 				"ms-toolsai.jupyter",
@@ -16,8 +12,8 @@
                 "ms-toolsai.jupyter-keymap",
                 "ms-toolsai.jupyter-renderers",
                 "ms-toolsai.vscode-jupyter-slideshow",
-                "ms-python.vscode-pylance",
-                "ms-python.python"
+                "ms-python.python",
+				"ms-python.vscode-pylance"
 			]
 		},
 		"codespaces": {
@@ -28,7 +24,7 @@
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": [
 		"apt-get update && apt-get install -y python3 python3-pip",
-		"pip3 install --user -r requirements.txt"
+		"pip install -r requirements.txt"
 	]
 }
 
