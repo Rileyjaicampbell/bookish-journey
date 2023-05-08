@@ -23,7 +23,8 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": [
-		"/home/codespace/.python/current/bin/pip install -r requirements.txt"
-	]
+		"apt-get update && apt-get install -y python3 python3-pip"
+	  ],
+	"postStartCommand": "pip install -r requirements.txt"
 }
 
