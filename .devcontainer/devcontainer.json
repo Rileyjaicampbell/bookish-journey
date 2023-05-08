@@ -34,8 +34,7 @@
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postStartCommand": [
-		"pip install -r requirements.txt",
-		"python -m spacy download en_core_web_md "
+		"pip install -r requirements.txt"
 	]
 }
 	
