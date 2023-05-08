@@ -30,12 +30,7 @@
 		"codespaces": {
 			"openFiles": ["tweet_client.ipynb"]
 			}
-	},
-
-	// Use 'postCreateCommand' to run commands after the container is created.
-	"postStartCommand": [
-		"pip install -r requirements.txt"
-	]
+	}
 }
 	
 
