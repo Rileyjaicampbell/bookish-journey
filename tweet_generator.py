@@ -7,9 +7,8 @@ import tiktoken
 import re
 import spacy
 from spacy import displacy
-import en_core_web_trf
 
-NER = en_core_web_trf.load()
+NER = spacy.load("en_core_web_md")
 
 openai.api_key = None
 
@@ -126,6 +125,8 @@ def simplePromptTweetGeneration(prompt,numSources, gptRole, self_improvement,mod
     global safeContextLimit
     global enc
     global searchAPI
+
+    print("loading...")
     
     openai.api_key = apiKeyOpenAI
     searchAPI = searchAPIKey
