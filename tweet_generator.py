@@ -55,8 +55,15 @@ def extractTextFromResource(linkLst):
             break
 
         out = out + "\n" + "Web Source number " + str(srsNum) + "\n"
-        response = requests.get(link)
-        paragraphs = justext.justext(response.content, justext.get_stoplist("English"))
+
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'}
+        response = requests.get(link,headers=headers)
+
+
+        if(response.status_code == 200):
+            paragraphs = justext.justext(response.content, justext.get_stoplist("English"))
+        else:
+            paragraphs = []
         
         for paragraph in paragraphs:
             tempOut = out + "\n" + paragraph.text
