@@ -114,7 +114,7 @@ def selfImprovement(tweet,gptRole,prompt, context,temp,selfImprovementLimitCount
     context = f"Imagine you are a {gptRole}. You have written a tweet '{currTweet}' that aims to answer the following query '{prompt}'. Now you want to improve that tweet. The original tweet was written based on the followin research : {context}"
 
     trace = [{"initial": currTweet}]
-    for _ in range(1,selfImprovementLimitCount):
+    for _ in range(0,selfImprovementLimitCount):
         msg = f"Please objectively evaluate the following tweet '{tweet}' with respect to it's clarity, engagement of the target audience, and it's ability to answer the following query/achieve following purpose '{prompt}'. Also suggest improvements without implementing them."
         feedback = askGPT(msg,context,temperatureIn = temp)
 
